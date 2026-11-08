@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ISO 15243 - Análise de Falhas em Rolamentos</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        },
+                        skf: {
+                            blue: '#00599c',
+                            red: '#e30613'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .code-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+        .glow-active {
+            box-shadow: 0 0 20px rgba(2, 132, 199, 0.25);
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between antialiased selection:bg-sky-500 selection:text-white">
+
+    <!-- TOP NAVBAR -->
+    <header class="bg-slate-900/90 border-b border-slate-800 backdrop-blur sticky top-0 z-50 px-4 lg:px-8 py-3">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-sky-500 to-skf-blue flex items-center justify-center text-white shadow-lg shadow-sky-500/20">
+                    <i class="fa-solid fa-microscope text-lg"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="font-bold text-lg text-white tracking-tight">ISO 15243 Simulator</h1>
+                        <span class="px-2 py-0.5 text-[10px] font-bold uppercase rounded bg-sky-500/20 text-sky-400 border border-sky-500/30">14 Modos de Falha</span>
+                    </div>
+                    <p class="text-xs text-slate-400">Análise Diagnóstica e Engenharia de Manutenção Preditiva</p>
+                </div>
+            </div>
+
+            <!-- Quick Action Bar -->
+            <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+                <div class="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-2 text-xs">
+                    <i class="fa-solid fa-circle-info text-sky-400"></i>
+                    <span id="current-iso-code" class="code-font text-sky-300 font-medium">ISO 15243 - 5.1.2</span>
+                </div>
+                <button id="themeToggle" class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 transition" title="Alternar Modo Claro/Escuro">
+                    <i class="fa-solid fa-moon"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD CONTENT -->
+    <div class="max-w-7xl mx-auto w-full px-4 lg:px-8 py-6 flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        <!-- SIDEBAR: ISO 15243 CATEGORY NAV -->
+        <aside class="lg:col-span-4 bg-slate-900/80 rounded-2xl border border-slate-800 p-4 max-h-[85vh] overflow-y-auto flex flex-col gap-4">
+            <div>
+                <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400 px-2 mb-2 flex justify-between items-center">
+                    <span>Categorias de Falha</span>
+                    <i class="fa-solid fa-layer-group text-slate-500"></i>
+                </h2>
+                <p class="text-xs text-slate-500 px-2 mb-3">Selecione um submodo para carregar a simulação física e o relatório RCA.</p>
+            </div>
+
+            <!-- Accordion / Failure List -->
+            <div class="space-y-2" id="failure-accordion">
+                <!-- Javascript will inject categories dynamic buttons here -->
+            </div>
+        </aside>
+
+        <!-- MAIN INTERACTIVE CANVAS & CONTROLS -->
+        <main class="lg:col-span-8 space-y-6">
+            
+            <!-- CANVAS CARD -->
+            <div class="bg-slate-900/90 rounded-2xl border border-slate-800 p-5 glow-active flex flex-col items-center relative overflow-hidden">
+                
+                <!-- Canvas Header Bar -->
+                <div class="w-full flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 pb-3 border-b border-slate-800">
+                    <div>
+                        <h2 id="active-failure-title" class="text-base font-bold text-white flex items-center gap-2">
+                            <span class="w-3 h-3 rounded-full bg-amber-500"></span>
+                            Fadiga Iniciada na Subsuperfície
+                        </h2>
+                        <p id="active-failure-category" class="text-xs text-slate-400 mt-0.5">1. Fadiga de Contato de Rolamento (Rolling Contact Fatigue)</p>
+                    </div>
+
+                    <!-- Interactive Badges -->
+                    <div class="flex items-center gap-2">
+                        <button id="toggle-overlay" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-sky-400 font-medium transition flex items-center gap-1.5">
+                            <i class="fa-solid fa-vector-square"></i>
+                            <span id="overlay-status">Camada VETORIAL: ON</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Canvas Visual Viewport -->
+                <div class="relative w-full aspect-video max-h-[420px] bg-slate-950 rounded-xl overflow-hidden border border-slate-800/80 flex items-center justify-center">
+                    <canvas id="bearingCanvas" class="w-full h-full cursor-grab active:cursor-grabbing"></canvas>
+                    
+                    <!-- HUD / Watermark overlay -->
+                    <div class="absolute bottom-3 right-3 bg-slate-900/80 backdrop-blur px-3 py-1.5 rounded-lg border border-slate-800 text-[11px] code-font text-slate-400 flex items-center gap-2 pointer-events-none">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span id="canvas-hud-fps">FPS: 60 | RPM: 450</span>
+                    </div>
+
+                    <!-- Zoom Info Badge -->
+                    <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur px-2.5 py-1 rounded border border-slate-800 text-[10px] text-slate-400 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass-plus mr-1"></i> Zoom: <span id="zoom-level">1.0x</span>
+                    </div>
+                </div>
+
+                <!-- CANVAS CONTROLS PANEL -->
+                <div class="w-full mt-4 pt-3 border-t border-slate-800/80 grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+                    
+                    <!-- Control 1: Speed & Animation -->
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 space-y-2">
+                        <div class="flex justify-between text-slate-300 font-medium">
+                            <span><i class="fa-solid fa-gauge-high mr-1 text-sky-400"></i> Velocidade / RPM</span>
+                            <span id="speed-val" class="code-font text-sky-400">1.0x</span>
+                        </div>
+                        <input type="range" id="speedSlider" min="0" max="3" step="0.1" value="1" class="w-full accent-sky-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between items-center pt-1">
+                            <button id="btn-play-pause" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-500 text-white rounded font-medium transition flex items-center gap-1">
+                                <i class="fa-solid fa-pause" id="play-icon"></i>
+                                <span id="play-text">Pausar</span>
+                            </button>
+                            <button id="btn-reset-view" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded transition">
+                                Resetar Câmera
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Control 2: Failure Severity Slider -->
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 space-y-2">
+                        <div class="flex justify-between text-slate-300 font-medium">
+                            <span><i class="fa-solid fa-triangle-exclamation mr-1 text-amber-400"></i> Severidade da Falha</span>
+                            <span id="severity-val" class="code-font text-amber-400">Avançado (75%)</span>
+                        </div>
+                        <input type="range" id="severitySlider" min="10" max="100" step="5" value="75" class="w-full accent-amber-500 bg-slate-800 h-1.5 rounded-lg appearance-none cursor-pointer">
+                        <p class="text-[10px] text-slate-500">Arraste para simular a progressão do dano na peça.</p>
+                    </div>
+
+                    <!-- Control 3: View Options -->
+                    <div class="bg-slate-950/60 p-3 rounded-xl border border-slate-800/60 space-y-2 flex flex-col justify-between">
+                        <div class="text-slate-300 font-medium">
+                            <i class="fa-solid fa-sliders mr-1 text-purple-400"></i> Modo de Exibição
+                        </div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button id="btn-view-2d" class="px-2 py-1 bg-sky-600 text-white rounded font-medium text-[11px] transition">Vista Seção 2D</button>
+                            <button id="btn-view-surface" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium text-[11px] transition">Pista / Superfície</button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- TECHNICAL REPORT & RCA CARD -->
+            <div class="bg-slate-900/90 rounded-2xl border border-slate-800 p-6 space-y-6">
+                
+                <!-- Report Header -->
+                <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-2 pb-4 border-b border-slate-800">
+                    <div>
+                        <h3 class="text-lg font-bold text-white flex items-center gap-2">
+                            <i class="fa-solid fa-file-contract text-sky-400"></i>
+                            Relatório Técnico de Diagnóstico
+                        </h3>
+                        <p class="text-xs text-slate-400">Especificação detalhada conforme norma ISO 15243 / SKF RCA Standard</p>
+                    </div>
+                    <span id="rca-iso-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 w-max">
+                        ISO 15243: 5.1.2
+                    </span>
+                </div>
+
+                <!-- Grid Details -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    <!-- Box 1: Descrição Visual & Sintomas -->
+                    <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-eye"></i> Padrão de Danos & Aparência
+                        </h4>
+                        <p id="report-appearance" class="text-xs text-slate-300 leading-relaxed">
+                            Lascamento / escamação (Spalling) profundo com bordas afiadas. A falha origina-se de microtrincas abaixo da camada temperada que se propagam até a superfície.
+                        </p>
+                    </div>
+
+                    <!-- Box 2: Causa Raiz Mecânica (RCA) -->
+                    <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-2">
+                        <h4 class="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bullseye"></i> Mecanismo de Causa Raiz
+                        </h4>
+                        <p id="report-root-cause" class="text-xs text-slate-300 leading-relaxed">
+                            Tensão de cisalhamento cíclica máxima excedendo a resistência do material abaixo da pista de rolamento. Acelerada por cargas pesadas contínuas ou flexão do eixo.
+                        </p>
+                    </div>
+
+                </div>
+
+                <!-- Box 3: Ações Corretivas e Preventivas -->
+                <div class="bg-slate-950/50 p-4 rounded-xl border border-slate-800/80 space-y-3">
+                    <h4 class="text-xs font-bold uppercase tracking-wider text-emerald-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-shield-halved"></i> Plano de Ação Preventivo & Recomendações
+                    </h4>
+                    <ul id="report-actions" class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+                        <li>Dimensionar rolamento para maior vida L10h ou capacidade de carga dinâmica C.</li>
+                        <li>Verificar deflexão do eixo e desalinhamento angular dos mancais.</li>
+                        <li>Monitorar evolução da vibração por análise de envelope de aceleração (gE).</li>
+                    </ul>
+                </div>
+
+            </div>
+
+        </main>
+    </div>
+
+    <!-- PROFESSIONAL FOOTER WITH REQUIRED SIGNATURE -->
+    <footer class="bg-slate-900 border-t border-slate-800 py-4 px-4 lg:px-8 mt-8">
+        <div class="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-4 text-xs text-slate-400">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 border border-sky-500/20 flex items-center justify-center font-bold">
+                    EB
+                </div>
+                <div>
+                    <p class="font-semibold text-slate-200">Engª Mecânica Viviane Borges Clamer</p>
+                    <p class="text-[11px] text-slate-500">Especialista em Engenharia de Manutenção & Alinhamento Industrial</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-6 text-[11px] text-slate-500">
+                <span><i class="fa-solid fa-book-bookmark mr-1"></i> ISO 15243:2017 Standard</span>
+                <span><i class="fa-solid fa-code mr-1"></i> HTML5 Canvas / WebGL Sim</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC & CANVAS SIMULATION ENGINE -->
+    <script>
+        // ISO 15243 DATA STRUCTURE FOR ALL 14 SUB-MODES OF FAILURE
+        const isoFailureModes = [
+            {
+                id: "1",
+                category: "1. Fadiga (Rolling Contact Fatigue)",
+                submodes: [
+                    {
+                        id: "1.1",
+                        iso: "ISO 15243 - 5.1.2",
+                        title: "Fadiga Iniciada na Subsuperfície",
+                        shortDesc: "Lascamento / Spalling por tensão cíclica profunda",
+                        appearance: "Descascamento e remoção de escamas de aço com bordas afiadas. Origina-se abaixo da pista temperada por fadiga de cisalhamento em inclusões de óxidos.",
+                        rootCause: "Atingimento do limite da vida L10 útil teórica do rolamento sob carga cíclica alta, ou deflexão excessiva do eixo gerando picos de tensão no material.",
+                        actions: [
+                            "Redimensionar rolamento para maior capacidade de carga dinâmica (C).",
+                            "Utilizar aços de alta pureza (maraging / ultralimpos).",
+                            "Verificar rigidez do alojamento e deflexões do eixo."
+                        ],
+                        renderType: "subsurface_spalling"
+                    },
+                    {
+                        id: "1.2",
+                        iso: "ISO 15243 - 5.1.3",
+                        title: "Fadiga Iniciada na Superfície",
+                        shortDesc: "Microspalling / Micro-crateramento por atrito",
+                        appearance: "Superfície fosca, acinzentada ou com aspecto de micro-pites (microspalling). Ocorre a quebra local do filme de óleo gerando picos de tensão nas asperidades do metal.",
+                        rootCause: "Lubrificação deficiente (razão de viscosidade Lambda < 1), contaminação com partículas finas ou deslizamento excessivo entre corpos rolantes.",
+                        actions: [
+                            "Aumentar viscosidade do lubrificante (Viscosidade Operacional ISO VG).",
+                            "Melhorar o acabamento superficial e rugosidade dos componentes.",
+                            "Utilizar aditivos EP (Extrema Pressão) adequados."
+                        ],
+                        renderType: "surface_spalling"
+                    }
+                ]
+            },
+            {
+                id: "2",
+                category: "2. Desgaste (Wear)",
+                submodes: [
+                    {
+                        id: "2.1",
+                        iso: "ISO 15243 - 5.2.2",
+                        title: "Desgaste Abrasivo",
+                        shortDesc: "Ranhuras longitudinais por contaminação externa",
+                        appearance: "Pistas com acabamento fosco, ranhurado longitudinalmente no sentido de rotação. Aspecto de lixamento contínuo.",
+                        rootCause: "Entrada de partículas duras contaminantes (sílica, poeira, limalhas) devido à vedação ineficiente ou graxa contaminada.",
+                        actions: [
+                            "Melhorar a vedação (retentores labirinto ou labiais reforçados).",
+                            "Estabelecer plano rígido de relubrificação e filtragem de óleo.",
+                            "Higienização estrita nos processos de montagem de bancada."
+                        ],
+                        renderType: "abrasive_wear"
+                    },
+                    {
+                        id: "2.2",
+                        iso: "ISO 15243 - 5.2.3",
+                        title: "Desgaste Adesivo (Smearing / Arraste)",
+                        shortDesc: "Transferência de metal por deslizamento sob alta rotação",
+                        appearance: "Marcas de queimado e arrasto com transferência de material entre a pista e os rolos/esferas. Aspecto rugoso e manchado.",
+                        rootCause: "Deslizamento dos elementos rodantes ao entrar na zona carregada sob alta aceleração e carga leve insuficiente.",
+                        actions: [
+                            "Garantir uma carga mínima prévia (preload) para evitar pré-deslizamento.",
+                            "Utilizar graxas especiais com alta capacidade de adesão de filme.",
+                            "Revisar taxas de aceleração nos inversores de frequência."
+                        ],
+                        renderType: "adhesive_wear"
+                    }
+                ]
+            },
+            {
+                id: "3",
+                category: "3. Corrosão (Corrosion)",
+                submodes: [
+                    {
+                        id: "3.1",
+                        iso: "ISO 15243 - 5.3.2",
+                        title: "Corrosão por Umidade / Oxidação",
+                        shortDesc: "Manchas de ferrugem e piteiras químicas",
+                        appearance: "Manchas escuras, esverdeadas ou avermelhadas de ferrugem nas pistas. Evolui para piteiras (pits) profundas alinhadas com os elementos.",
+                        rootCause: "Presença de água, umidade condensa ou fluidos agressivos de corte no interior do mancal.",
+                        actions: [
+                            "Utilizar lubrificante com aditivos inibidores de corrosão / ferrugem.",
+                            "Instalar vedações especiais resistentes a jatos d'água.",
+                            "Utilizar rolamentos em aço inoxidável ou com revestimento de Zn-Ni / No-Wear."
+                        ],
+                        renderType: "rust_corrosion"
+                    },
+                    {
+                        id: "3.2",
+                        iso: "ISO 15243 - 5.3.3",
+                        title: "Corrosão por Atrito (Fretting)",
+                        shortDesc: "Oxidação avermelhada no furo/diâmetro externo",
+                        appearance: "Pó vermelho/marrom (óxido de ferro / hematita) na superfície de ajuste do furo ou diâmetro externo da capa.",
+                        rootCause: "Micromovimentos oscilatórios entre o anel do rolamento e o eixo/caixa devido a ajustes e tolerâncias frouxas.",
+                        actions: [
+                            "Corrigir tolerâncias dimensional e de forma de eixos (ex: k5, m5).",
+                            "Aplicar pasta de montagem anti-fretting (ex: SKF LGAF 3).",
+                            "Aumentar o aperto de montagem ou interferência."
+                        ],
+                        renderType: "fretting_corrosion"
+                    },
+                    {
+                        id: "3.3",
+                        iso: "ISO 15243 - 5.3.4",
+                        title: "Falso Brinelling",
+                        shortDesc: "Depressões micro-oxidadas causadas por vibração parado",
+                        appearance: "Depressões retangulares ou elípticas marcadas na pista exatamente no passo dos corpos rolantes, com fundo oxidado ou brilhante.",
+                        rootCause: "Vibração externa contínua incidindo sobre a máquina enquanto parada (ex.: bomba reserva vibrando por proximidade).",
+                        actions: [
+                            "Isolar bases e fundações contra vibrações transmissíveis.",
+                            "Realizar rotatividade periódica de eixos em equipamentos reservas.",
+                            "Utilizar graxas com excelente estabilidade a vibração e micro-movimentos."
+                        ],
+                        renderType: "false_brinelling"
+                    }
+                ]
+            },
+            {
+                id: "4",
+                category: "4. Erosão Elétrica (Electrical Erosion)",
+                submodes: [
+                    {
+                        id: "4.1",
+                        iso: "ISO 15243 - 5.4.2",
+                        title: "Erosão por Tensão Excessiva (Arcing)",
+                        shortDesc: "Crateras de fusão por arcos elétricos intensos",
+                        appearance: "Crateras localizadas visíveis a olho nu (pontos de fusão local) com crateras arredondadas e crateramento pontual.",
+                        rootCause: "Passagem de corrente elétrica de alta voltagem (ex: solda elétrica efetuada na estrutura sem aterramento adequado no componente).",
+                        actions: [
+                            "Nunca aterrar máquinas de solda através de eixos conectando rolamentos.",
+                            "Utilizar cabos de aterramento dedicados de baixa impedância."
+                        ],
+                        renderType: "electrical_arcing"
+                    },
+                    {
+                        id: "4.2",
+                        iso: "ISO 15243 - 5.4.3",
+                        title: "Erosão por Fuga de Corrente (Fluting)",
+                        shortDesc: "Estriamento / Tábua de lavar por estática/VFD",
+                        appearance: "Padrão paralelo ondulado transversal (efeito 'tábua de lavar' / ranhuras paralelas) de cor cinza-escura nas pistas.",
+                        rootCause: "Passagem contínua de pequenas correntes elétricas de alta frequência geradas por Inversores de Frequência (VFD).",
+                        actions: [
+                            "Utilizar rolamentos isolados eletricamente (SKF INSOCOAT com camada cerâmica).",
+                            "Utilizar elementos rodantes em cerâmica (Rolamentos Híbridos).",
+                            "Instalar anéis de aterramento de eixo (Shaft Grounding Rings)."
+                        ],
+                        renderType: "electrical_fluting"
+                    }
+                ]
+            },
+            {
+                id: "5",
+                category: "5. Deformação Plástica (Plastic Deformation)",
+                submodes: [
+                    {
+                        id: "5.1",
+                        iso: "ISO 15243 - 5.5.2",
+                        title: "Sobrecarga / Verdadeiro Brinelling",
+                        shortDesc: "Indentações profundas por impacto ou sobrecarga estática",
+                        appearance: "Depressões permanentes com o perfil exato das esferas/rolos. Mantém as marcas originais de usinagem no fundo do entalhe.",
+                        rootCause: "Choque mecânico violento ou golpes de martelo durante a montagem incorreta, ou sobrecarga estática severa.",
+                        actions: [
+                            "Utilizar ferramentas corretas de montagem (Kits de montagem a frio TMFT ou aquecedores por indução).",
+                            "Evitar aplicar força de montagem através dos corpos rolantes."
+                        ],
+                        renderType: "true_brinelling"
+                    },
+                    {
+                        id: "5.2",
+                        iso: "ISO 15243 - 5.5.3",
+                        title: "Indentação por Partículas (Debris)",
+                        shortDesc: "Pequenas moscas com cristas elevadas por contaminantes",
+                        appearance: "Pequenas marcas d'água ou crateras puntiformes com bordas elevadas (cristas salientes).",
+                        rootCause: "Partículas duras de contaminação presas e prensadas entre o elemento rodante e a pista.",
+                        actions: [
+                            "Lavar o sistema de lubrificação antes da entrada em operação.",
+                            "Substituir lubrificante e elementos filtrantes em ciclos curtos."
+                        ],
+                        renderType: "debris_indentation"
+                    }
+                ]
+            },
+            {
+                id: "6",
+                category: "6. Trincamento e Fratura (Cracking & Fracture)",
+                submodes: [
+                    {
+                        id: "6.1",
+                        iso: "ISO 15243 - 5.6.2",
+                        title: "Fratura Forçada (Forced Fracture)",
+                        shortDesc: "Ruptura bruta do anel por esforços de tração",
+                        appearance: "Fratura completa e limpa do anel interno ou externo, sem marcas prévias de fadiga.",
+                        rootCause: "Interferência excessiva na montagem em eixos cônicos, ou esforço de impacto violento com cunhas.",
+                        actions: [
+                            "Calcular e respeitar o calibramento de folga residual (redução de folga radial na montagem).",
+                            "Utilizar chaves de gancho e calibradores de folga adequados."
+                        ],
+                        renderType: "forced_fracture"
+                    },
+                    {
+                        id: "6.2",
+                        iso: "ISO 15243 - 5.6.3",
+                        title: "Fratura por Fadiga (Fatigue Fracture)",
+                        shortDesc: "Trinca com linhas de praia (beach marks)",
+                        appearance: "Superfície de fratura contendo marcas onduladas concêntricas (marcas de praia) indicando propagação lenta.",
+                        rootCause: "Flexão cíclica contínua sobre o anel devido ao suporte deficiente no alojamento ou desalinhamento severo.",
+                        actions: [
+                            "Usinar e alinhar perfeitamente os assentos dos mancais.",
+                            "Evitar apoios pontuais e superfícies ovais nos alojamentos."
+                        ],
+                        renderType: "fatigue_fracture"
+                    },
+                    {
+                        id: "6.3",
+                        iso: "ISO 15243 - 5.6.4",
+                        title: "Trincamento Térmico (Thermal Cracking)",
+                        shortDesc: "Microtrincas transversais por atrito de roçamento",
+                        appearance: "Rede de finas trincas paralelas ou transversais ao sentido de deslizamento, geralmente acompanhada de descoloração por calor.",
+                        rootCause: "Geração intensa de calor por atrito em deslizamentos severos de anéis contra flanges ou vedações presas.",
+                        actions: [
+                            "Garantir folga axial livre para dilatação térmica do eixo.",
+                            "Verificar interferência de roçamento em vedações mecânicas."
+                        ],
+                        renderType: "thermal_cracking"
+                    }
+                ]
+            }
+        ];
+
+        // APP STATE
+        let activeSubmode = isoFailureModes[0].submodes[0];
+        let isSpinning = true;
+        let rotationAngle = 0;
+        let animSpeed = 1.0;
+        let damageSeverity = 75; // 10 to 100
+        let showVectors = true;
+        let viewMode = '2d'; // '2d' or 'surface'
+        let cameraZoom = 1.0;
+
+        // CANVAS ENGINE REFERENCES
+        const canvas = document.getElementById('bearingCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // INITIALIZATION
+        window.addEventListener('DOMContentLoaded', () => {
+            initAccordionUI();
+            setupCanvasResize();
+            setupEventListeners();
+            loadSubmodeDetails(activeSubmode);
+            requestAnimationFrame(renderLoop);
+        });
+
+        // BUILD SIDEBAR ACCORDION
+        function initAccordionUI() {
+            const accordionContainer = document.getElementById('failure-accordion');
+            accordionContainer.innerHTML = '';
+
+            isoFailureModes.forEach((cat, idx) => {
+                const isFirst = idx === 0;
+                
+                const catGroup = document.createElement('div');
+                catGroup.className = 'border border-slate-800 rounded-xl bg-slate-950/40 overflow-hidden';
+                
+                const headerBtn = document.createElement('button');
+                headerBtn.className = 'w-full px-3 py-2.5 text-left text-xs font-semibold text-slate-200 bg-slate-900/90 hover:bg-slate-800 flex justify-between items-center transition';
+                headerBtn.innerHTML = `
+                    <span class="truncate max-w-[240px]">${cat.category}</span>
+                    <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform duration-200" id="arrow-${cat.id}"></i>
+                `;
+                
+                const subContent = document.createElement('div');
+                subContent.id = `subcontent-${cat.id}`;
+                subContent.className = `p-1.5 space-y-1 ${isFirst ? 'block' : 'hidden'}`;
+
+                cat.submodes.forEach(sub => {
+                    const subBtn = document.createElement('button');
+                    subBtn.id = `btn-sub-${sub.id}`;
+                    subBtn.className = `submode-btn w-full px-2.5 py-2 rounded-lg text-left text-xs flex flex-col gap-0.5 transition ${sub.id === activeSubmode.id ? 'bg-sky-600/20 text-sky-300 border border-sky-500/30 font-medium' : 'text-slate-400 hover:bg-slate-800/60 hover:text-slate-200'}`;
+                    subBtn.innerHTML = `
+                        <div class="flex justify-between items-center">
+                            <span class="font-semibold">${sub.title}</span>
+                            <span class="code-font text-[9px] px-1 rounded bg-slate-800 text-slate-400">${sub.id}</span>
+                        </div>
+                        <span class="text-[10px] text-slate-500 truncate">${sub.shortDesc}</span>
+                    `;
+                    subBtn.onclick = () => {
+                        setActiveSubmode(sub);
+                    };
+                    subContent.appendChild(subBtn);
+                });
+
+                headerBtn.onclick = () => {
+                    const isHidden = subContent.classList.contains('hidden');
+                    document.querySelectorAll('[id^="subcontent-"]').forEach(el => el.classList.add('hidden'));
+                    document.querySelectorAll('[id^="arrow-"]').forEach(el => el.classList.remove('rotate-180'));
+                    
+                    if (isHidden) {
+                        subContent.classList.remove('hidden');
+                        document.getElementById(`arrow-${cat.id}`).classList.add('rotate-180');
+                    }
+                };
+
+                catGroup.appendChild(headerBtn);
+                catGroup.appendChild(subContent);
+                accordionContainer.appendChild(catGroup);
+            });
+        }
+
+        // SWITCH ACTIVE SUBMODE
+        function setActiveSubmode(submode) {
+            activeSubmode = submode;
+            document.querySelectorAll('.submode-btn').forEach(btn => {
+                btn.className = 'submode-btn w-full px-2.5 py-2 rounded-lg text-left text-xs flex flex-col gap-0.5 transition text-slate-400 hover:bg-slate-800/60 hover:text-slate-200';
+            });
+            const activeBtn = document.getElementById(`btn-sub-${submode.id}`);
+            if (activeBtn) {
+                activeBtn.className = 'submode-btn w-full px-2.5 py-2 rounded-lg text-left text-xs flex flex-col gap-0.5 transition bg-sky-600/20 text-sky-300 border border-sky-500/30 font-medium';
+            }
+
+            loadSubmodeDetails(submode);
+        }
+
+        // POPULATE REPORT TEXT
+        function loadSubmodeDetails(submode) {
+            document.getElementById('current-iso-code').innerText = submode.iso;
+            document.getElementById('active-failure-title').innerText = submode.title;
+            document.getElementById('active-failure-category').innerText = submode.iso;
+            document.getElementById('rca-iso-badge').innerText = submode.iso;
+
+            document.getElementById('report-appearance').innerText = submode.appearance;
+            document.getElementById('report-root-cause').innerText = submode.rootCause;
+
+            const actionsList = document.getElementById('report-actions');
+            actionsList.innerHTML = '';
+            submode.actions.forEach(act => {
+                const li = document.createElement('li');
+                li.innerText = act;
+                actionsList.appendChild(li);
+            });
+        }
+
+        // CANVAS RESIZING
+        function setupCanvasResize() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        window.addEventListener('resize', setupCanvasResize);
+
+        // UI EVENT LISTENERS
+        function setupEventListeners() {
+            // Speed Slider
+            const speedSlider = document.getElementById('speedSlider');
+            speedSlider.addEventListener('input', (e) => {
+                animSpeed = parseFloat(e.target.value);
+                document.getElementById('speed-val').innerText = `${animSpeed.toFixed(1)}x`;
+            });
+
+            // Play / Pause Button
+            const playBtn = document.getElementById('btn-play-pause');
+            playBtn.addEventListener('click', () => {
+                isSpinning = !isSpinning;
+                document.getElementById('play-icon').className = isSpinning ? "fa-solid fa-pause" : "fa-solid fa-play";
+                document.getElementById('play-text').innerText = isSpinning ? "Pausar" : "Iniciar";
+            });
+
+            // Severity Slider
+            const severitySlider = document.getElementById('severitySlider');
+            severitySlider.addEventListener('input', (e) => {
+                damageSeverity = parseInt(e.target.value);
+                document.getElementById('severity-val').innerText = `${damageSeverity}% Severity`;
+            });
+
+            // Toggle Overlay Vectors
+            const toggleOverlayBtn = document.getElementById('toggle-overlay');
+            toggleOverlayBtn.addEventListener('click', () => {
+                showVectors = !showVectors;
+                document.getElementById('overlay-status').innerText = showVectors ? "Camada VETORIAL: ON" : "Camada VETORIAL: OFF";
+                toggleOverlayBtn.className = showVectors ? 
+                    "px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-sky-400 font-medium transition flex items-center gap-1.5" :
+                    "px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-400 font-medium transition flex items-center gap-1.5";
+            });
+
+            // View Mode buttons
+            document.getElementById('btn-view-2d').addEventListener('click', () => {
+                viewMode = '2d';
+                document.getElementById('btn-view-2d').className = "px-2 py-1 bg-sky-600 text-white rounded font-medium text-[11px] transition";
+                document.getElementById('btn-view-surface').className = "px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium text-[11px] transition";
+            });
+
+            document.getElementById('btn-view-surface').addEventListener('click', () => {
+                viewMode = 'surface';
+                document.getElementById('btn-view-surface').className = "px-2 py-1 bg-sky-600 text-white rounded font-medium text-[11px] transition";
+                document.getElementById('btn-view-2d').className = "px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium text-[11px] transition";
+            });
+
+            // Reset View
+            document.getElementById('btn-reset-view').addEventListener('click', () => {
+                cameraZoom = 1.0;
+                document.getElementById('zoom-level').innerText = "1.0x";
+            });
+        }
+
+        // MAIN CANVAS ANIMATION LOOP
+        function renderLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (isSpinning) {
+                rotationAngle += 0.015 * animSpeed;
+            }
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+
+            if (viewMode === '2d') {
+                render2DSection(centerX, centerY);
+            } else {
+                renderUnrolledSurface(centerX, centerY);
+            }
+
+            // Update HUD text
+            document.getElementById('canvas-hud-fps').innerText = `FPS: 60 | RPM: ${Math.round(animSpeed * 450)}`;
+
+            requestAnimationFrame(renderLoop);
+        }
+
+        // 2D SECTION RENDERER
+        function render2DSection(cx, cy) {
+            ctx.save();
+            ctx.translate(cx, cy);
+            ctx.scale(cameraZoom, cameraZoom);
+
+            // Ensure radii are always strictly positive regardless of canvas scaling/sizing
+            const minDim = Math.max(Math.min(canvas.width, canvas.height), 100);
+            const outerR = Math.max(minDim * 0.38, 30);
+            const innerR = Math.max(outerR * 0.55, 15);
+            const ballR = Math.max((outerR - innerR) * 0.42, 5);
+            const pitchR = (outerR + innerR) / 2;
+            const numBalls = 9;
+
+            // Outer Ring
+            const outerTrackR = Math.max(outerR - 18, 10);
+            ctx.beginPath();
+            ctx.arc(0, 0, outerR, 0, Math.PI * 2);
+            ctx.arc(0, 0, outerTrackR, 0, Math.PI * 2, true);
+            ctx.fillStyle = '#334155';
+            ctx.fill();
+            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = '#64748b';
+            ctx.stroke();
+
+            // Inner Ring (Rotates)
+            const innerTrackR = Math.max(innerR + 18, outerTrackR - 10);
+            const innerBoreR = Math.max(innerR - 15, 5);
+            ctx.save();
+            ctx.rotate(rotationAngle);
+            ctx.beginPath();
+            ctx.arc(0, 0, innerTrackR, 0, Math.PI * 2);
+            ctx.arc(0, 0, innerBoreR, 0, Math.PI * 2, true);
+            ctx.fillStyle = '#475569';
+            ctx.fill();
+            ctx.strokeStyle = '#64748b';
+            ctx.stroke();
+
+            // Shaft center
+            ctx.beginPath();
+            ctx.arc(0, 0, innerBoreR, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+            ctx.restore();
+
+            // Draw Balls
+            for (let i = 0; i < numBalls; i++) {
+                const ballAngle = rotationAngle + (i * Math.PI * 2 / numBalls);
+                const bx = pitchR * Math.cos(ballAngle);
+                const by = pitchR * Math.sin(ballAngle);
+
+                ctx.beginPath();
+                ctx.arc(bx, by, ballR, 0, Math.PI * 2);
+                let grad = ctx.createRadialGradient(bx - ballR * 0.3, by - ballR * 0.3, 2, bx, by, ballR);
+                grad.addColorStop(0, '#ffffff');
+                grad.addColorStop(1, '#94a3b8');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.strokeStyle = '#1e293b';
+                ctx.stroke();
+            }
+
+            // RENDER SPECIFIC FAILURE VISUAL OVERLAY ON CANVAS
+            renderFailureOverlay(outerR, innerR, pitchR, ballR);
+
+            ctx.restore();
+        }
+
+        // RENDER FAILURE VISUAL DETAILS DYNAMICALLY
+        function renderFailureOverlay(outerR, innerR, pitchR, ballR) {
+            const type = activeSubmode.renderType;
+            const sev = damageSeverity / 100;
+
+            const outerTrackR = Math.max(outerR - 18, 10);
+            const innerTrackR = Math.max(innerR + 14, 10);
+
+            if (type === 'subsurface_spalling') {
+                // Spalling craters on outer raceway
+                ctx.beginPath();
+                ctx.arc(0, 0, outerTrackR, -0.4, 0.4);
+                ctx.lineWidth = Math.max(10 * sev, 1);
+                ctx.strokeStyle = '#b45309';
+                ctx.stroke();
+
+                // Flaking texture
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(Math.max(outerR - 24, 5), -15, 12 * sev, 30 * sev);
+
+                if (showVectors) {
+                    ctx.beginPath();
+                    ctx.setLineDash([3, 3]);
+                    ctx.arc(0, 0, Math.max(outerR - 28, 5), -0.5, 0.5);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+            else if (type === 'surface_spalling') {
+                // Micro-pitting burn spots
+                for (let a = 0; a < Math.PI * 2; a += 0.3) {
+                    if (Math.sin(a * 4) > 0) {
+                        const px = outerTrackR * Math.cos(a);
+                        const py = outerTrackR * Math.sin(a);
+                        ctx.beginPath();
+                        ctx.arc(px, py, Math.max(3 * sev, 1), 0, Math.PI * 2);
+                        ctx.fillStyle = '#ea580c';
+                        ctx.fill();
+                    }
+                }
+            }
+            else if (type === 'abrasive_wear') {
+                // Concentric dull wear grooves
+                ctx.beginPath();
+                ctx.arc(0, 0, outerTrackR, 0, Math.PI * 2);
+                ctx.lineWidth = Math.max(6 * sev, 1);
+                ctx.strokeStyle = '#64748b';
+                ctx.stroke();
+
+                if (showVectors) {
+                    ctx.font = '10px JetBrains Mono';
+                    ctx.fillStyle = '#38bdf8';
+                    ctx.fillText(' Desgaste Abrasivo (Lixado)', outerR + 5, 0);
+                }
+            }
+            else if (type === 'adhesive_wear') {
+                // Smearing drag patches
+                ctx.rotate(rotationAngle);
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(innerTrackR, -10, Math.max(8 * sev, 2), 25);
+                ctx.fillRect(innerTrackR, 40, Math.max(8 * sev, 2), 20);
+                ctx.rotate(-rotationAngle);
+            }
+            else if (type === 'rust_corrosion') {
+                // Red rust spots
+                ctx.fillStyle = '#9a3412';
+                const rustR = Math.max(outerR - 20, 5);
+                for (let i = 0; i < 12; i++) {
+                    const angle = i * 0.5;
+                    const rx = rustR * Math.cos(angle);
+                    const ry = rustR * Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, Math.max(6 * sev, 1), 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            else if (type === 'fretting_corrosion') {
+                // Fretting red powder outside outer ring
+                ctx.beginPath();
+                ctx.arc(0, 0, outerR + 4, 0, Math.PI * 2);
+                ctx.lineWidth = Math.max(8 * sev, 1);
+                ctx.strokeStyle = '#7c2d12';
+                ctx.stroke();
+            }
+            else if (type === 'false_brinelling') {
+                // Step notches matching ball positions
+                const numBalls = 9;
+                for (let i = 0; i < numBalls; i++) {
+                    const angle = (i * Math.PI * 2 / numBalls);
+                    const bx = outerTrackR * Math.cos(angle);
+                    const by = outerTrackR * Math.sin(angle);
+                    ctx.fillStyle = '#b45309';
+                    ctx.fillRect(bx - 4, by - 4, Math.max(8 * sev, 2), Math.max(8 * sev, 2));
+                }
+            }
+            else if (type === 'electrical_arcing') {
+                // Arcing melt crater
+                ctx.beginPath();
+                ctx.arc(0, -outerTrackR, Math.max(8 * sev, 2), 0, Math.PI * 2);
+                ctx.fillStyle = '#facc15';
+                ctx.fill();
+                ctx.strokeStyle = '#ef4444';
+                ctx.stroke();
+            }
+            else if (type === 'electrical_fluting') {
+                // Fluting stripes (washboard)
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#475569';
+                const rInner = Math.max(outerR - 24, 5);
+                const rOuter = Math.max(outerR - 12, 10);
+                for (let a = 0; a < Math.PI * 2; a += 0.08) {
+                    const x1 = rInner * Math.cos(a);
+                    const y1 = rInner * Math.sin(a);
+                    const x2 = rOuter * Math.cos(a);
+                    const y2 = rOuter * Math.sin(a);
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                }
+            }
+            else if (type === 'true_brinelling') {
+                // True Brinelling indentations
+                for (let i = 0; i < 9; i++) {
+                    const angle = (i * Math.PI * 2 / 9);
+                    const bx = outerTrackR * Math.cos(angle);
+                    const by = outerTrackR * Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.arc(bx, by, Math.max(ballR * 0.6, 2), 0, Math.PI * 2);
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = Math.max(2 * sev, 1);
+                    ctx.stroke();
+                }
+            }
+            else if (type === 'debris_indentation') {
+                // Small debris dots with raised rims
+                for (let i = 0; i < 20; i++) {
+                    const a = i * 0.31;
+                    ctx.beginPath();
+                    ctx.arc(outerTrackR * Math.cos(a), outerTrackR * Math.sin(a), Math.max(2.5 * sev, 1), 0, Math.PI * 2);
+                    ctx.fillStyle = '#0284c7';
+                    ctx.fill();
+                }
+            }
+            else if (type === 'forced_fracture') {
+                // Crack line right through inner ring
+                const innerBoreR = Math.max(innerR - 15, 5);
+                const innerTrackR = Math.max(innerR + 18, 10);
+                ctx.beginPath();
+                ctx.moveTo(0, innerBoreR);
+                ctx.lineTo(0, innerTrackR);
+                ctx.lineWidth = Math.max(4 * sev, 1);
+                ctx.strokeStyle = '#ef4444';
+                ctx.stroke();
+            }
+            else if (type === 'fatigue_fracture') {
+                // Crack line with beach marks
+                ctx.beginPath();
+                ctx.moveTo(-outerTrackR, 0);
+                ctx.lineTo(-outerR, 0);
+                ctx.lineWidth = Math.max(4 * sev, 1);
+                ctx.strokeStyle = '#f97316';
+                ctx.stroke();
+            }
+            else if (type === 'thermal_cracking') {
+                // Micro thermal cracks perpendicular
+                ctx.strokeStyle = '#e11d48';
+                ctx.lineWidth = 1.5;
+                const rInner = Math.max(outerR - 24, 5);
+                const rOuter = Math.max(outerR - 12, 10);
+                for (let i = -20; i <= 20; i += 5) {
+                    ctx.beginPath();
+                    ctx.moveTo(rInner, i);
+                    ctx.lineTo(rOuter, i);
+                    ctx.stroke();
+                }
+            }
+        }
+<!-- ... existing code -->
