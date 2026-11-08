@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise de Falhas em Rolamentos - ISO 15243</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+        }
+        
+        .glow-effect {
+            box-shadow: 0 0 25px rgba(59, 130, 246, 0.25);
+        }
+
+        .failure-card {
+            transition: all 0.3s ease;
+        }
+
+        .failure-card.active {
+            border-color: #3b82f6;
+            background-color: rgba(30, 41, 59, 0.9);
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col justify-between p-4 md:p-8">
+
+    <!-- Cabeçalho -->
+    <header class="max-w-6xl mx-auto w-full mb-6 text-center md:text-left flex flex-col md:flex-row justify-between items-center gap-4 border-b border-slate-800 pb-4">
+        <div>
+            <h1 class="text-2xl md:text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+                <i class="fa-solid font-bold text-blue-500 fa-gear"></i>
+                Diagnóstico de Falhas em Rolamentos
+            </h1>
+            <p class="text-slate-400 text-sm mt-1">Classificação visual baseada na norma ISO 15243</p>
+        </div>
+        <div class="bg-slate-800/80 px-4 py-2 rounded-lg border border-slate-700 text-xs text-slate-300">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+            Simulador Didático Interativo
+        </div>
+    </header>
+
+    <!-- Conteúdo Principal -->
+    <main class="max-w-6xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start flex-grow">
+        
+        <!-- Área de Simulação Visual (Canvas) -->
+        <div class="lg:col-span-7 bg-slate-900/90 rounded-2xl p-6 border border-slate-800 glow-effect flex flex-col items-center relative overflow-hidden">
+            <div class="w-full flex justify-between items-center mb-4 z-10">
+                <span id="speed-label" class="text-xs font-semibold uppercase tracking-wider text-slate-400">Status: Operação Normal</span>
+                <div class="flex gap-2">
+                    <button id="btn-toggle-spin" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-md text-xs font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-pause" id="spin-icon"></i>
+                        <span id="spin-text">Pausar Rotação</span>
+                    </button>
+                    <button id="btn-reset" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-xs font-medium transition">
+                        Resetar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Canvas Animado -->
+            <div class="relative w-full aspect-square max-w-[380px] flex items-center justify-center my-2">
+                <canvas id="bearingCanvas" width="400" height="400" class="w-full h-full cursor-pointer"></canvas>
+            </div>
+
+            <!-- Dica de Interação -->
+            <p class="text-xs text-slate-500 text-center mt-2">
+                <i class="fa-solid fa-hand-pointer mr-1"></i> Selecione um modo de falha no painel lateral para simular os danos no rolamento.
+            </p>
+        </div>
+
+        <!-- Painel de Seleção e Detalhes da Falha -->
+        <div class="lg:col-span-5 flex flex-col gap-4">
+            
+            <!-- Seleção de Falha -->
+            <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800">
+                <h2 class="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-3">Modos de Falha (ISO 15243)</h2>
+                <div class="grid grid-cols-1 gap-2.5" id="failure-selector">
+                    
+                    <button onclick="selectFailure('normal')" class="failure-card active w-full p-3 rounded-xl border border-slate-800 text-left flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+                                <i class="fa-solid fa-check-circle"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-white">Sem Falha / Operação Normal</h3>
+                                <p class="text-xs text-slate-400">Superfícies íntegras e lubrificadas</p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFailure('fatigue')" class="failure-card w-full p-3 rounded-xl border border-slate-800 text-left flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-white">1. Fadiga (Spalling / Descascamento)</h3>
+                                <p class="text-xs text-slate-400">Microtrincas por tensão cíclica de carga</p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFailure('abrasive')" class="failure-card w-full p-3 rounded-xl border border-slate-800 text-left flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center">
+                                <i class="fa-solid fa-gears"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-white">2. Desgaste Abrasivo</h3>
+                                <p class="text-xs text-slate-400">Entrada de partículas contaminantes</p>
+                            </div>
+                        </div>
+                    </button>
+
+                    <button onclick="selectFailure('lubrication')" class="failure-card w-full p-3 rounded-xl border border-slate-800 text-left flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+                                <i class="fa-solid fa-droplet-slash"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-sm font-medium text-white">3. Falha de Lubrificação</h3>
+                                <p class="text-xs text-slate-400">Aquecimento por atrito metal-metal</p>
+                            </div>
+                        </div>
+                    </button>
+
+                </div>
+            </div>
+
+            <!-- Painel Informativo Dinâmico -->
+            <div class="bg-slate-900/90 rounded-2xl p-5 border border-slate-800">
+                <div class="flex items-center gap-2 mb-2">
+                    <span id="badge-code" class="px-2 py-0.5 text-[10px] font-bold rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">ISO 15243</span>
+                    <h3 id="info-title" class="text-base font-bold text-white">Operação Normal</h3>
+                </div>
+                <p id="info-desc" class="text-xs text-slate-300 leading-relaxed mb-3">
+                    O rolamento está operando em condições ideais de carga, alinhamento e filme lubrificante. Não há sinais visíveis de degradação.
+                </p>
+                <div class="border-t border-slate-800 pt-3">
+                    <h4 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Causas Principais:</h4>
+                    <p id="info-causes" class="text-xs text-slate-400">N/A — Condição ideal.</p>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- Rodapé Padrão com Assinatura solicitada -->
+    <footer class="max-w-6xl mx-auto w-full mt-8 pt-4 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-2 text-slate-400 text-xs">
+        <div>
+            <span>Engª Mecânica Viviane Borges Clamer</span>
+        </div>
+        <div class="text-slate-500">
+            Análise de Componentes & Maintenance Engineering
+        </div>
+    </footer>
+
+    <script>
+        // Dados das falhas de acordo com a ISO 15243
+        const failureData = {
+            normal: {
+                title: "Operação Normal",
+                code: "ISO 15243 - 0.0",
+                desc: "O rolamento trabalha sob condições ideais com o filme de óleo/graxa separando os corpos rolantes das pistas.",
+                causes: "N/A — Lubrificação e alinhamento adequados."
+            },
+            fatigue: {
+                title: "Fadiga de Superfície (Spalling)",
+                code: "ISO 15243 - 5.1",
+                desc: "Remoção de micropartículas de material da pista devido às contínuas tensões cíclicas de cisalhamento abaixo da superfície.",
+                causes: "Fim da vida útil teórica L10, sobrecarga mecânica contínua ou desalinhamento severo de eixos."
+            },
+            abrasive: {
+                title: "Desgaste Abrasivo",
+                code: "ISO 15243 - 5.2.2",
+                desc: "Perda progressiva de material gerada pela presença de partículas duras no lubrificante (poeira, limalha ou fuligem).",
+                causes: "Vedação ineficiente, contaminação durante a montagem ou degradação do lubrificante."
+            },
+            lubrication: {
+                title: "Falha de Lubrificação (Aderência/Aquecimento)",
+                code: "ISO 15243 - 5.3",
+                desc: "Contato direto metal-metal causando microwelding (solda a frio), amarelamento por superaquecimento e engripamento.",
+                causes: "Falta de lubrificante, viscosidade inadequada para a rotação ou temperatura excessiva de trabalho."
+            }
+        };
+
+        // Estado da animação
+        let currentFailure = 'normal';
+        let isSpinning = true;
+        let angle = 0;
+        const canvas = document.getElementById('bearingCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Seleção de falhas
+        function selectFailure(type) {
+            currentFailure = type;
+            
+            // Atualizar botões
+            document.querySelectorAll('.failure-card').forEach(card => card.classList.remove('active'));
+            event.currentTarget.classList.add('active');
+
+            // Atualizar informações
+            const info = failureData[type];
+            document.getElementById('info-title').innerText = info.title;
+            document.getElementById('badge-code').innerText = info.code;
+            document.getElementById('info-desc').innerText = info.desc;
+            document.getElementById('info-causes').innerText = info.causes;
+
+            // Status label
+            const speedLabel = document.getElementById('speed-label');
+            if (type === 'normal') {
+                speedLabel.innerText = "Status: Operação Normal";
+                speedLabel.className = "text-xs font-semibold uppercase tracking-wider text-emerald-400";
+            } else {
+                speedLabel.innerText = "Status: Falha Detectada (" + info.title + ")";
+                speedLabel.className = "text-xs font-semibold uppercase tracking-wider text-amber-400";
+            }
+        }
+
+        // Controle de Rotação
+        document.getElementById('btn-toggle-spin').addEventListener('click', () => {
+            isSpinning = !isSpinning;
+            const icon = document.getElementById('spin-icon');
+            const text = document.getElementById('spin-text');
+            if (isSpinning) {
+                icon.className = "fa-solid fa-pause";
+                text.innerText = "Pausar Rotação";
+            } else {
+                icon.className = "fa-solid fa-play";
+                text.innerText = "Iniciar Rotação";
+            }
+        });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            angle = 0;
+            selectFailure('normal');
+        });
+
+        // Loop de Renderização do Desenho 2D do Rolamento
+        function drawBearing() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const outerRadius = 160;
+            const innerRadius = 90;
+            const ballRadius = 26;
+            const ballTrackRadius = (outerRadius + innerRadius) / 2;
+            const numBalls = 8;
+
+            // Anel Externo (Fixo)
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
+            ctx.arc(centerX, centerY, outerRadius - 20, 0, Math.PI * 2, true);
+            ctx.fillStyle = currentFailure === 'lubrication' ? '#94a3b8' : '#cbd5e1';
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = '#475569';
+            ctx.stroke();
+
+            // Pista Externa (Danos visíveis se houver falha)
+            if (currentFailure === 'fatigue') {
+                // Efeito descascamento (Spalling) na pista superior
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius - 20, Math.PI * 1.2, Math.PI * 1.5);
+                ctx.lineWidth = 10;
+                ctx.strokeStyle = '#b45309';
+                ctx.stroke();
+            } else if (currentFailure === 'abrasive') {
+                // Efeito desgaste por ranhuras
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius - 20, 0, Math.PI * 2);
+                ctx.lineWidth = 4;
+                ctx.strokeStyle = '#64748b';
+                ctx.setLineDash([4, 4]);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            } else if (currentFailure === 'lubrication') {
+                // Marcas de superaquecimento (azul/amarelado)
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, outerRadius - 20, 0, Math.PI * 2);
+                ctx.lineWidth = 8;
+                ctx.strokeStyle = '#d97706';
+                ctx.stroke();
+            }
+
+            // Anel Interno (Gira com o eixo)
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(angle);
+
+            ctx.beginPath();
+            ctx.arc(0, 0, innerRadius + 20, 0, Math.PI * 2);
+            ctx.arc(0, 0, innerRadius - 10, 0, Math.PI * 2, true);
+            ctx.fillStyle = '#94a3b8';
+            ctx.fill();
+            ctx.strokeStyle = '#334155';
+            ctx.stroke();
+
+            // Eixo Central (Chaveta visual)
+            ctx.beginPath();
+            ctx.arc(0, 0, innerRadius - 10, 0, Math.PI * 2);
+            ctx.fillStyle = '#1e293b';
+            ctx.fill();
+            ctx.fillRect(-8, -innerRadius + 10, 16, 20);
+
+            ctx.restore();
+
+            // Esferas (Corpos Rolantes)
+            for (let i = 0; i < numBalls; i++) {
+                const currentBallAngle = angle + (i * (Math.PI * 2 / numBalls));
+                const bx = centerX + ballTrackRadius * Math.cos(currentBallAngle);
+                const by = centerY + ballTrackRadius * Math.sin(currentBallAngle);
+
+                ctx.beginPath();
+                ctx.arc(bx, by, ballRadius, 0, Math.PI * 2);
+                
+                // Cor da esfera varia de acordo com o estado
+                let ballGradient = ctx.createRadialGradient(bx - 8, by - 8, 3, bx, by, ballRadius);
+                if (currentFailure === 'lubrication') {
+                    ballGradient.addColorStop(0, '#fde047');
+                    ballGradient.addColorStop(1, '#78350f');
+                } else if (currentFailure === 'abrasive') {
+                    ballGradient.addColorStop(0, '#94a3b8');
+                    ballGradient.addColorStop(1, '#334155');
+                } else {
+                    ballGradient.addColorStop(0, '#ffffff');
+                    ballGradient.addColorStop(1, '#64748b');
+                }
+                
+                ctx.fillStyle = ballGradient;
+                ctx.fill();
+                ctx.lineWidth = 1;
+                ctx.strokeStyle = '#1e293b';
+                ctx.stroke();
+
+                // Ponto de dano em uma das esferas para o modo fadiga
+                if (currentFailure === 'fatigue' && i === 0) {
+                    ctx.beginPath();
+                    ctx.arc(bx - 5, by - 5, 6, 0, Math.PI * 2);
+                    ctx.fillStyle = '#451a03';
+                    ctx.fill();
+                }
+            }
+
+            // Atualização do ângulo de rotação
+            if (isSpinning) {
+                angle += (currentFailure === 'lubrication' ? 0.008 : 0.02); // Rotação mais lenta no superaquecimento
+            }
+
+            requestAnimationFrame(drawBearing);
+        }
+
+        // Inicializar animação
+        window.onload = () => {
+            drawBearing();
+        };
+    </script>
+</body>
+</html>
